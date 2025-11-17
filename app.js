@@ -9,12 +9,12 @@ const routeAgent = require("./routes/agent")
 
 app.use(bodyParser.urlencoded({extended:true}))
 app.use(bodyParser.json())
+app.use(cors());
 
 app.use((req, res, next) => {
     res.header('Access-Control-Allow-Origin', '*');
     res.header('Access-Control-Allow-Methods', 'PUT, POST, PATCH, DELETE, GET');
     res.header('Access-Control-Allow-Headers','Origin, X-Request-With, Content-Type, Accept, Authorization');
- app.use(cors());
     next();
 });
 
