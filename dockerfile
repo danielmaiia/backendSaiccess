@@ -1,5 +1,5 @@
 # 1. Começamos com uma imagem oficial do Node.js
-FROM node:18-slim
+FROM node:20-slim
 
 # 2. Instalamos as dependências do sistema que o Oracle precisa
 RUN apt-get update && apt-get install -y wget unzip libaio1 && rm -rf /var/lib/apt/lists/*
