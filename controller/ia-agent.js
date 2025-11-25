@@ -210,9 +210,78 @@ exports.analyzeCsvWithGemini = async (req, res) => {
     const genAI = new GoogleGenerativeAI(API_KEY);
     const model = genAI.getGenerativeModel({ model: 'gemini-2.5-flash' });
 
+    const outputSchema = {
+      type: "object",
+      properties: {
+        table1: {
+          type: "array",
+          items: {
+            type: "object",
+            properties: {
+              name: { type: "string" },
+              samaccountname: { type: "string", enum: ["Desconhecido", "string"] }, // Adaptar conforme a lógica
+              role: { type: "string", enum: ["Desconhecido", "string"] },
+              assignment: { type: "string" },
+              group_code: { type: "string", pattern: "^GRP_[A-Z]{2,}_[A-Z0-9]{2,}_(R|M|A)$" }, // Reforça o formato RBAC
+              group_label: { type: "string" },
+              justification: { type: "string" },
+              role_fit: { type: "boolean" },
+              not_fit_reason: { type: "string" },
+              sod_summary: { type: "array", items: { type: "string" } },
+            },
+            required: ["name", "samaccountname", "role_fit"], // Adicionar campos obrigatórios
+          },
+        },
+        table2: {
+          type: "array",
+          items: {
+            type: "object",
+            properties: {
+              name: { type: "string" },
+              samaccountname: { type: "string" },
+              sod_rule: {
+                type: "object",
+                properties: {
+                  key: { type: "string" },
+                  source: { type: "string", enum: ["provided", "inferred"] }
+                }
+              },
+              evidence: { type: "array", items: { type: "string" } },
+              risk: { type: "string", enum: ["low", "medium", "high"] },
+              recommendation: { type: "string" }
+            },
+            required: ["samaccountname", "risk"],
+          },
+        },
+        summary: {
+          type: "object",
+          properties: {
+            users_total: { type: "number" },
+            users_role_fit: { type: "number" },
+            users_role_fit_pct: { type: "string" },
+            users_with_sod: { type: "number" },
+            users_with_sod_pct: { type: "string" },
+            top_groups: {
+              type: "array",
+              items: {
+                type: "object",
+                properties: {
+                  group_code: { type: "string" },
+                  count: { type: "number" }
+                }
+              }
+            },
+            notes: { type: "array", items: { type: "string" } }
+          },
+          required: ["users_total"]
+        }
+      },
+      required: ["table1", "table2", "summary"]
+    };
+
     const result = await model.generateContent({
       contents: [{ role: 'user', parts: [{ text: prompt }] }],
-      generationConfig: { temperature: 0.2, topP: 0.9, responseMimeType: 'application/json' },
+      generationConfig: { temperature: 0.2, topP: 0.9, responseSchema: outputSchema },
     });
 
     // Parse robusto
