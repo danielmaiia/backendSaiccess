@@ -82,40 +82,56 @@ exports.AuthUser = async (req, res) => {
   } catch (error) {
     console.error("Erro no AuthUser:", error);
     return res.status(500).json({ err: "Erro interno no servidor" });
+  } finally {
+    // *** IMPORTANTE: sempre fechar a conexão ***
+    if (connection) {
+      try {
+        await connection.close(); // ou connection.release(), dependendo da lib
+      } catch (closeErr) {
+        console.error("Erro ao fechar conexão no AuthUser:", closeErr);
+      }
+    }
   }
 };
 
 // CADASTRO DE FUNCIONÁRIO
 exports.insertFuncionario = async (req, res) => {
+  let connection;
+
   try {
-    const connection = await database.getConnection();
-    bcrypt.hash(req.body.password, 20, async (err, hash) => {
-      if (err) {
-        return res
-          .status(500)
-          .send({ error: "Erro ao gerar o hash da senha." });
-      }
+    // 1) Gera o hash da senha
+    const hash = await bcrypt.hash(req.body.password, 20);
 
-      const userInsert = `
-        INSERT INTO CONTROL_USER
-          (name, email, password, status)
-        VALUES
-          (:name, :email, :password, :status)
-      `;
+    // 2) Abre conexão
+    connection = await database.getConnection();
 
-      const binds = {
-        name: req.body.name,
-        email: req.body.email,
-        password: hash,
-        status: 1,
-      };
+    const userInsert = `
+      INSERT INTO CONTROL_USER
+        (name, email, password, status)
+      VALUES
+        (:name, :email, :password, :status)
+    `;
 
-      await connection.execute(userInsert, binds, { autoCommit: true });
-      return res.status(201).json({ message: "Success" });
-    });
+    const binds = {
+      name: req.body.name,
+      email: req.body.email,
+      password: hash,
+      status: 1,
+    };
+
+    await connection.execute(userInsert, binds, { autoCommit: true });
+    return res.status(201).json({ message: "Success" });
   } catch (error) {
     console.error("Erro no insertFuncionario:", error);
     return res.status(500).send({ error: error.message });
+  } finally {
+    if (connection) {
+      try {
+        await connection.close();
+      } catch (closeErr) {
+        console.error("Erro ao fechar conexão no insertFuncionario:", closeErr);
+      }
+    }
   }
 };
 
@@ -199,5 +215,14 @@ exports.changePassword = async (req, res) => {
   } catch (error) {
     console.error("Erro ao trocar senha:", error);
     return res.status(500).json({ error: "Erro ao trocar senha" });
+  }  finally {
+    // *** IMPORTANTE: sempre fechar a conexão ***
+    if (connection) {
+      try {
+        await connection.close(); // ou connection.release(), dependendo da lib
+      } catch (closeErr) {
+        console.error("Erro ao fechar conexão no AuthUser:", closeErr);
+      }
+    }
   }
 };
